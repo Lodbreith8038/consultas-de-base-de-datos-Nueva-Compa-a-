@@ -1,0 +1,63 @@
+--1. Se desea saber el número de empleados que han nacido cada mes del año.--
+SELECT
+    MONTH(fechaNac_Emp) AS mes_numero,
+    DATENAME(MONTH, fechaNac_Emp) AS mes,
+    COUNT(*) AS total_empleados
+FROM Empleado
+GROUP BY MONTH(fechaNac_Emp), DATENAME(MONTH, fechaNac_Emp)
+ORDER BY MONTH(fechaNac_Emp);
+--Mostrar el número de empleados hombres y mujeres que trabajan en cada departamento.--
+SELECT
+    e.numero_Dep,
+    d.nombre_Dep,
+    SUM(CASE WHEN e.sexo_Emp = 1 THEN 1 ELSE 0 END) AS hombres,
+    SUM(CASE WHEN e.sexo_Emp = 0 THEN 1 ELSE 0 END) AS mujeres
+FROM Empleado e
+LEFT JOIN Departamento d
+    ON d.numero_Dep = e.numero_Dep
+GROUP BY e.numero_Dep, d.nombre_Dep
+ORDER BY e.numero_Dep;
+--3. Modificar la consulta anterior para obtener totalizaciones por departamento.--
+SELECT
+    d.numero_Dep,
+    d.nombre_Dep,
+    SUM(CASE WHEN e.sexo_Emp = 1 THEN 1 ELSE 0 END) AS hombres,
+    SUM(CASE WHEN e.sexo_Emp = 0 THEN 1 ELSE 0 END) AS mujeres,
+    COUNT(*) AS total_empleados
+FROM Empleado e
+JOIN Departamento d
+    ON d.numero_Dep = e.numero_Dep
+GROUP BY d.numero_Dep, d.nombre_Dep
+ORDER BY d.numero_Dep;
+--Mostrar el número de proyectos que se vienen ejecutando actualmente en cada lugar registrado. Considerar solo aquellos proyectos en los que participan al menos 25 empleados.--
+SELECT
+    p.lugar_Pro,
+    COUNT(DISTINCT p.numero_Pro) AS proyectos
+FROM Proyecto p
+JOIN (
+    SELECT numero_Pro
+    FROM Trabaja
+    GROUP BY numero_Pro
+    HAVING COUNT(DISTINCT nss_Emp) >= 25
+) x
+    ON x.numero_Pro = p.numero_Pro
+GROUP BY p.lugar_Pro
+ORDER BY p.lugar_Pro;
+--Mostrar el número de empleados que ingresaron a trabajar a la compañía por cada día del mes de marzo del 2024.--
+SELECT
+    DAY(fechaIng_Emp) AS dia_mes,
+    COUNT(*) AS total_empleados
+FROM Empleado
+WHERE fechaIng_Emp >= '2024-03-01' AND fechaIng_Emp < '2024-04-01'
+GROUP BY DAY(fechaIng_Emp)
+ORDER BY DAY(fechaIng_Emp);
+-- Mostrar el número de empleados que ganan un salario que se encuentra en los siguientes rangos: 400-1000, 1001-2000, 2001-3000, 3001-4000, 4001-5000.
+--
+SELECT
+    SUM(CASE WHEN salario_Emp BETWEEN 400 AND 1000 THEN 1 ELSE 0 END) AS [400-1000],
+    SUM(CASE WHEN salario_Emp BETWEEN 1001 AND 2000 THEN 1 ELSE 0 END) AS [1001-2000],
+    SUM(CASE WHEN salario_Emp BETWEEN 2001 AND 3000 THEN 1 ELSE 0 END) AS [2001-3000],
+    SUM(CASE WHEN salario_Emp BETWEEN 3001 AND 4000 THEN 1 ELSE 0 END) AS [3001-4000],
+    SUM(CASE WHEN salario_Emp BETWEEN 4001 AND 5000 THEN 1 ELSE 0 END) AS [4001-5000]
+FROM Empleado
+WHERE salario_Emp BETWEEN 400 AND 5000;
