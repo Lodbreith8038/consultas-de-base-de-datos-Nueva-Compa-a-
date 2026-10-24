@@ -1,34 +1,54 @@
 -- 1. Número de empleados hombres y mujeres
-SELECT sexo, COUNT(*) AS total_empleados
-FROM empleado
-GROUP BY sexo
+SELECT 
+    CASE 
+        WHEN sexo_Emp = 1 THEN 'Hombre'
+        ELSE 'Mujer'
+    END AS sexo,
+    COUNT(*) AS total_empleados
+FROM Empleado
+GROUP BY 
+    CASE 
+        WHEN sexo_Emp = 1 THEN 'Hombre'
+        ELSE 'Mujer'
+    END
 ORDER BY total_empleados DESC;
 
 -- 2. Salario mínimo por departamento
-SELECT d.nombre_dept, MIN(e.salario) AS salario_minimo
-FROM departamento d
-INNER JOIN empleado e ON d.num_dept = e.num_dept
-GROUP BY d.nombre_dept
+SELECT 
+    d.nombre_Dep,
+    MIN(e.salario_Emp) AS salario_minimo
+FROM Departamento d
+INNER JOIN Empleado e ON d.numero_Dep = e.numero_Dep
+GROUP BY d.nombre_Dep
 ORDER BY salario_minimo ASC;
 
 -- 3. Departamento con más empleados
-SELECT d.nombre_dept, COUNT(e.dni) AS total_empleados
-FROM departamento d
-INNER JOIN empleado e ON d.num_dept = e.num_dept
-GROUP BY d.nombre_dept
-ORDER BY total_empleados DESC
-LIMIT 1;
+SELECT TOP 1
+    d.nombre_Dep,
+    COUNT(e.nss_Emp) AS total_empleados
+FROM Departamento d
+INNER JOIN Empleado e ON d.numero_Dep = e.numero_Dep
+GROUP BY d.nombre_Dep
+ORDER BY total_empleados DESC;
 
 -- 4. Dependientes por empleado y tipo de parentesco
-SELECT e.nombre, e.apellido, dep.parentesco, COUNT(dep.nombre_dependiente) AS total_dependientes
-FROM empleado e
-INNER JOIN dependiente dep ON e.dni = dep.dni_empleado
-GROUP BY e.dni, e.nombre, e.apellido, dep.parentesco
-ORDER BY e.apellido, e.nombre, dep.parentesco;
+SELECT 
+    CONCAT(e.nombre_Emp, ' ', e.apellidoPat_Emp, ' ', e.apellidoMat_Emp) AS nombre_completo,
+    dep.parentesco_Depe,
+    COUNT(*) AS total_dependientes
+FROM Empleado e
+INNER JOIN Dependiente dep ON e.nss_Emp = dep.nss_Emp
+GROUP BY 
+    CONCAT(e.nombre_Emp, ' ', e.apellidoPat_Emp, ' ', e.apellidoMat_Emp),
+    dep.parentesco_Depe
+ORDER BY nombre_completo, dep.parentesco_Depe;
 
 -- 5. Proyectos controlados por departamento según su estado
-SELECT d.nombre_dept, p.estado, COUNT(p.num_proy) AS total_proyectos
-FROM departamento d
-INNER JOIN proyecto p ON d.num_dept = p.num_dept
-GROUP BY d.nombre_dept, p.estado
-ORDER BY d.nombre_dept, p.estado;
+SELECT 
+    d.nombre_Dep,
+    p.estado_Pro,
+    COUNT(p.numero_Pro) AS total_proyectos
+FROM Departamento d
+INNER JOIN Proyecto p ON d.numero_Dep = p.numero_Dep
+GROUP BY d.nombre_Dep, p.estado_Pro
+ORDER BY d.nombre_Dep, p.estado_Pro;
