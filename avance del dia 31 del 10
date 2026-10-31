@@ -1,0 +1,40 @@
+USE NuevaCompañia;
+GO
+
+-- CONSULTA #1: Departamentos en reestructuración (al menos el 5% de sus empleados no tiene ningún proyecto asignado)
+SELECT UPPER(D.nombre_Dep) AS departamento
+FROM Departamento AS D
+INNER JOIN Empleado AS E ON E.numero_Dep = D.numero_Dep
+LEFT JOIN Trabaja AS T ON T.nss_Emp = E.nss_Emp
+GROUP BY D.numero_Dep, D.nombre_Dep
+HAVING COUNT(DISTINCT E.nss_Emp) > 0 
+   AND (COUNT(DISTINCT E.nss_Emp) - COUNT(DISTINCT T.nss_Emp)) * 100.0 / COUNT(DISTINCT E.nss_Emp) >= 5.0;
+
+
+-- CONSULTA #2: Edad promedio entera de los empleados por departamento, solo si el departamento controla 2 proyectos o menos
+SELECT D.nombre_Dep AS departamento,
+       (
+           SELECT AVG(DATEDIFF(YEAR, E.fechaNac_Emp, GETDATE()) - 
+                      CASE WHEN DATEADD(YEAR, DATEDIFF(YEAR, E.fechaNac_Emp, GETDATE()), E.fechaNac_Emp) > GETDATE() THEN 1 ELSE 0 END)
+           FROM Empleado AS E
+           WHERE E.numero_Dep = D.numero_Dep
+       ) AS edad_promedio
+FROM Departamento AS D
+WHERE (
+    SELECT COUNT(*)
+    FROM Proyecto AS P
+    WHERE P.numero_Dep = D.numero_Dep
+) <= 2;
+
+
+-- CONSULTA #3: Empleados y sus cónyuges que nacieron en el mismo mes pero en diferente año, con nombres unidos y formato dd/mm/yyyy
+SELECT CONCAT(E.nombre_Emp, ' ', E.apellidoPat_Emp, ' ', E.apellidoMat_Emp, ' / ', 
+              D.nombres_Depe, ' ', D.apellidoPat_Depe, ' ', D.apellidoMat_Depe) AS empleado_y_conyuge,
+       CONVERT(VARCHAR(10), E.fechaNac_Emp, 103) AS nacimiento_empleado,
+       CONVERT(VARCHAR(10), D.fechaNac_Depe, 103) AS nacimiento_conyuge
+FROM Empleado AS E
+INNER JOIN Dependiente AS D 
+    ON D.nss_Emp = E.nss_Emp
+WHERE D.parentesco_Depe = 'conyuge'
+  AND MONTH(E.fechaNac_Emp) = MONTH(D.fechaNac_Depe)
+  AND YEAR(E.fechaNac_Emp) <> YEAR(D.fechaNac_Depe);
