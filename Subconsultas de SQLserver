@@ -1,43 +1,22 @@
--- #1 Listar los empleados con al menos 10 años de antigüedad
--- que trabajan 15 horas o más en algún proyecto en ejecución
--- controlado por los departamentos de Ventas o Marketing.
+USE NuevaCompañia;
+GO
 
-SELECT *
+-- #1 Empleados con al menos 10 años de antigüedad que trabajan >= 15 horas en proyectos en ejecución de Ventas o Marketing
+SELECT DISTINCT E.*
 FROM Empleado AS E
+INNER JOIN Trabaja AS T ON E.nss_Emp = T.nss_Emp
+INNER JOIN Proyecto AS P ON T.numero_Pro = P.numero_Pro
+INNER JOIN Departamento AS D ON P.numero_Dep = D.numero_Dep
 WHERE E.fechaIng_Emp <= DATEADD(YEAR, -10, GETDATE())
-AND E.nss_Emp IN
-(
-    SELECT T.nss_Emp
-    FROM Trabaja AS T
-    WHERE T.horasSem_Tra >= 15
-    AND T.numero_Pro IN
-    (
-        SELECT P.numero_Pro
-        FROM Proyecto AS P
-        WHERE P.estado_Pro = 'E'
-        AND P.numero_Dep IN
-        (
-            SELECT D.numero_Dep
-            FROM Departamento AS D
-            WHERE D.nombre_Dep IN ('Ventas', 'Marketing')
-        )
-    )
-);
+  AND T.horasSem_Tra >= 15
+  AND P.estado_Pro = 'E'
+  AND D.nombre_Dep IN ('Ventas', 'Marketing');
 
 
-
--- #2 Verificar si existe alguna ciudad donde haya sucursales
--- de departamentos, pero no se ejecute ningún proyecto.
-
+-- #2 Verificar si existe alguna ciudad con sucursales de departamentos donde no se ejecute ningún proyecto
 SELECT DISTINCT L.lugar_Lde AS Ciudad
 FROM LugarDepartamento AS L
-WHERE EXISTS
-(
-    SELECT 1
-    FROM Departamento AS D
-    WHERE D.numero_Dep = L.numero_Dep
-)
-AND NOT EXISTS
+WHERE NOT EXISTS
 (
     SELECT 1
     FROM Proyecto AS P
@@ -45,46 +24,39 @@ AND NOT EXISTS
 );
 
 
-
--- #3 Listar los empleados que reciben el menor salario
--- de sus respectivos departamentos y que ingresaron
--- a trabajar en julio o diciembre.
-
-SELECT *
+-- #3 Empleados con el menor salario de su departamento que ingresaron en julio o diciembre
+SELECT E.*
 FROM Empleado AS E
-WHERE E.salario_Emp =
-(
-    SELECT MIN(E2.salario_Emp)
-    FROM Empleado AS E2
-    WHERE E2.numero_Dep = E.numero_Dep
-)
-AND MONTH(E.fechaIng_Emp) IN (7, 12);
+WHERE E.numero_Dep IS NOT NULL
+  AND E.salario_Emp = 
+  (
+      SELECT MIN(E2.salario_Emp)
+      FROM Empleado AS E2
+      WHERE E2.numero_Dep = E.numero_Dep
+  )
+  AND MONTH(E.fechaIng_Emp) IN (7, 12);
 
 
-
--- #4 Listar los empleados que trabajan en los mismos proyectos
--- que el empleado que dedica más horas semanales en total
--- a sus proyectos, sin incluir al propio empleado.
-
-SELECT *
+-- #4 Empleados que trabajan en los mismos proyectos que el empleado con más horas semanales totales (excluyendo a este último)
+SELECT DISTINCT E.*
 FROM Empleado AS E
-WHERE EXISTS
+INNER JOIN Trabaja AS T ON E.nss_Emp = T.nss_Emp
+WHERE T.numero_Pro IN 
 (
-    SELECT 1
-    FROM Trabaja AS T1
-    WHERE T1.nss_Emp = E.nss_Emp
-    AND EXISTS
-    (
-        SELECT 1
-        FROM Trabaja AS T2
-        WHERE T2.numero_Pro = T1.numero_Pro
-        AND T2.nss_Emp <> E.nss_Emp
-        AND T2.nss_Emp =
-        (
-            SELECT TOP 1 T3.nss_Emp
-            FROM Trabaja AS T3
-            GROUP BY T3.nss_Emp
-            ORDER BY SUM(T3.horasSem_Tra) DESC, T3.nss_Emp
-        )
+    -- Proyectos asignados al empleado con más horas semanales en total
+    SELECT T_Top.numero_Pro
+    FROM Trabaja AS T_Top
+    WHERE T_Top.nss_Emp = (
+        SELECT TOP 1 T3.nss_Emp
+        FROM Trabaja AS T3
+        GROUP BY T3.nss_Emp
+        ORDER BY SUM(ISNULL(T3.horasSem_Tra, 0)) DESC, T3.nss_Emp ASC
     )
+)
+AND E.nss_Emp <> (
+    -- NSS del empleado con más horas semanales en total para excluirlo
+    SELECT TOP 1 T3.nss_Emp
+    FROM Trabaja AS T3
+    GROUP BY T3.nss_Emp
+    ORDER BY SUM(ISNULL(T3.horasSem_Tra, 0)) DESC, T3.nss_Emp ASC
 );
